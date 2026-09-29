@@ -36,4 +36,5 @@ jobs:
             sleep 1
           done
           python tests/search_smoke.py || { cat /tmp/applydesk-dev.log; exit 1; }
+          python tests/preferences_smoke.py || { cat /tmp/applydesk-dev.log; exit 1; }
           node scripts/cleanup-test-data.mjs

@@ -1,5 +1,6 @@
-import {companySchema} from '@/lib/company-schema';
+import {getPreferences,configuredUrl,matchPreferences} from '@/lib/preferences';
 import {getCurrentUser} from '@/lib/auth';
+import {updateStatus} from '@/lib/updates';
 import {database,event} from '@/lib/store';
 import {canonicalUrl,matchJob,normalizeStage,nextCheck} from '@/lib/domain.mjs';
 import {feishuConfigured,syncFeishu} from '@/lib/feishu';
@@ -7,11 +8,11 @@ import type {Job} from '@/lib/types';
 import {z} from 'zod';
 export const dynamic='force-dynamic';
 const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
-const jobSchema=z.object({id:z.string().uuid().optional(),company:companySchema,title:z.string().trim().min(1).max(200),url:z.string().url().max(2000),location:z.string().trim().max(200).default(''),employment:z.string().trim().max(100).default(''),description:z.string().max(16000).default(''),appliedAt:z.string().datetime({offset:true}).nullable().optional(),rawStatus:z.string().trim().max(500).optional()});
+const jobSchema=z.object({id:z.string().uuid().optional(),company:z.string().trim().min(1).max(80),title:z.string().trim().min(1).max(200),url:z.string().url().max(2000),location:z.string().trim().max(200).default(''),employment:z.string().trim().max(100).default(''),description:z.string().max(16000).default(''),appliedAt:z.string().datetime({offset:true}).nullable().optional(),rawStatus:z.string().trim().max(500).optional()});
 async function list(owner:string){return (await database().prepare('SELECT * FROM jobs WHERE owner=? ORDER BY createdAt DESC,id').bind(owner).all<Job>()).results;}
 export async function GET(){
  const user=await getCurrentUser();if(!user)return reply({error:'请先登录看板',signIn:'/'},401);
- try{const db=database();const [jobs,events,settings,sources,searches]=await Promise.all([list(user.userId),db.prepare('SELECT id,jobId,message,createdAt FROM events WHERE owner=? ORDER BY createdAt DESC LIMIT 100').bind(user.userId).all(),db.prepare('SELECT sheetUrl,syncedAt,syncError FROM settings WHERE owner=?').bind(user.userId).first(),db.prepare('SELECT company,state,checkedAt,lastSuccessAt,error,recordCount FROM sources WHERE owner=?').bind(user.userId).all(),db.prepare('SELECT company,state,sourceUrl,checkedAt,error,itemCount FROM searches WHERE owner=?').bind(user.userId).all()]);return reply({searches:searches.results,sources:sources.results,jobs,events:events.results,feishu:{configured:feishuConfigured(),sheetUrl:null,syncedAt:null,syncError:null,...settings},schedule:{enabled:false,nextAt:nextCheck(),reason:'定时任务尚未启用，当前为按次检查'}});}catch{ return reply({error:'暂时无法读取记录，请稍后刷新'},503);}
+ try{const preferences=await getPreferences(user.userId),updates=await updateStatus(user.userId);const db=database();const [jobs,events,settings,sources,searches]=await Promise.all([list(user.userId),db.prepare('SELECT id,jobId,message,createdAt FROM events WHERE owner=? ORDER BY createdAt DESC LIMIT 100').bind(user.userId).all(),db.prepare('SELECT sheetUrl,syncedAt,syncError FROM settings WHERE owner=?').bind(user.userId).first(),db.prepare('SELECT company,state,checkedAt,lastSuccessAt,error,recordCount FROM sources WHERE owner=?').bind(user.userId).all(),db.prepare('SELECT company,state,sourceUrl,checkedAt,error,itemCount FROM searches WHERE owner=?').bind(user.userId).all()]);return reply({preferences,updates,searches:searches.results,sources:sources.results,jobs,events:events.results,feishu:{configured:feishuConfigured(),sheetUrl:null,syncedAt:null,syncError:null,...settings},schedule:{enabled:!!updates.registration&&preferences.updatesEnabled,nextAt:nextCheck(),reason:!preferences.updatesEnabled?'自动更新已暂停':updates.registration?'工作日 10:00，通过本机 Codex 与 Edge 执行':'尚未绑定自动任务'}});}catch{ return reply({error:'暂时无法读取记录，请稍后刷新'},503);}
 }
 export async function POST(request:Request){
  const user=await getCurrentUser();if(!user)return reply({error:'请先登录看板'},401);
@@ -20,16 +21,16 @@ export async function POST(request:Request){
  if(Number(request.headers.get('content-length'))>1000000)return reply({error:'导入数据过大'},413);
  try{
  const raw=await request.text();if(raw.length>1000000)return reply({error:'导入数据过大'},413);
- const body=JSON.parse(raw);const db=database(),owner=user.userId,now=new Date().toISOString();
+ const body=JSON.parse(raw);const preferences=await getPreferences(user.userId);const db=database(),owner=user.userId,now=new Date().toISOString();
  if(body.action==='import'){
-   const parsed=z.array(jobSchema).min(1).max(100).parse(body.jobs).map(item=>({...item,url:canonicalUrl(item.company,item.url)}));
+   const parsed=z.array(jobSchema).min(1).max(100).parse(body.jobs).map(item=>({...item,url:configuredUrl(preferences,item.company,item.url,true)}));
    const items=[...new Map(parsed.map(item=>[item.url,item])).values()];
    for(const item of items){if(item.rawStatus&&!item.appliedAt&&!item.id)throw new Error('填写投递状态时需要提供实际投递时间');if(item.appliedAt&&new Date(item.appliedAt)>new Date())throw new Error('实际投递时间不能晚于现在');}
    const statements:D1PreparedStatement[]=[];
    let count=0;
    for(const item of items){
      const previous=item.id?await db.prepare('SELECT * FROM jobs WHERE owner=? AND id=?').bind(owner,item.id).first<Job>():await db.prepare('SELECT * FROM jobs WHERE owner=? AND (recordKey=? OR (recordKey IS NULL AND url=?))').bind(owner,'url:'+item.url,item.url).first<Job>();
-     const match=matchJob(item);const id=previous?.id||crypto.randomUUID();
+     const match=matchPreferences(item,preferences);const id=previous?.id||crypto.randomUUID();
      if(previous){
        statements.push(db.prepare('UPDATE jobs SET title=?,location=?,employment=?,description=?,direction=?,matchState=?,matchReason=?,updatedAt=?,decision=CASE WHEN ?<>\'matched\' AND decision=\'approved\' AND applied=0 AND appliedAt IS NULL THEN \'pending\' ELSE decision END WHERE id=? AND owner=?').bind(item.title,item.location,item.employment,item.description,match.direction,match.state,match.reason,now,match.state,id,owner),event(owner,id,`更新岗位资料：${item.company} · ${item.title}`));
      }else{

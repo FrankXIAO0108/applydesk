@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {searchDue} from '../lib/cadence.mjs';
+test('weekly and fortnightly intervals use Beijing calendar days rather than elapsed hours',()=>{const last={state:'ready',checkedAt:'2026-09-29T07:00:00Z'};assert.equal(searchDue(last,7,new Date('2026-10-06T02:00:00Z')),true);assert.equal(searchDue(last,14,new Date('2026-10-06T02:00:00Z')),false);assert.equal(searchDue(last,14,new Date('2026-10-13T02:00:00Z')),true);assert.equal(searchDue(last,7,new Date('2026-10-05T15:59:59Z')),false);});
+test('failed and partial sources retry next execution rather than waiting another cycle',()=>{assert.equal(searchDue({state:'partial',checkedAt:new Date().toISOString()},14),true);assert.equal(searchDue(null,7),true);});

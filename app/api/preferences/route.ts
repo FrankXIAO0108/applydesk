@@ -1,0 +1,4 @@
+import {getCurrentUser} from '@/lib/auth';
+import {getPreferences,savePreferences} from '@/lib/preferences';
+export async function GET(){const u=await getCurrentUser();if(!u)return Response.json({error:'请先登录'},{status:401});return Response.json(await getPreferences(u.userId),{headers:{'Cache-Control':'no-store'}});}
+export async function POST(req:Request){const u=await getCurrentUser();if(!u)return Response.json({error:'请先登录'},{status:401});if(req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin)return Response.json({error:'来源校验失败'},{status:403});try{const raw=await req.text();if(raw.length>100000)throw new Error('设置过大');return Response.json(await savePreferences(u.userId,JSON.parse(raw)));}catch(e){return Response.json({error:(e as Error).message},{status:400});}}
