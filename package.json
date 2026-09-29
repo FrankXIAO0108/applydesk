@@ -1,6 +1,6 @@
 {
   "name": "applydesk",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -12,7 +12,9 @@
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "node scripts/generate-schema.mjs",
-    "privacy:check": "node scripts/check-export.mjs"
+    "privacy:check": "node scripts/check-export.mjs",
+    "start": "node scripts/start.mjs --open",
+    "start:agent": "node scripts/start.mjs --json"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",

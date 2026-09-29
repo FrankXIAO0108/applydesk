@@ -3,6 +3,7 @@
 // See examples/d1/db/schema.ts for an opt-in example.
 import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import {sql} from 'drizzle-orm';
+export const onboarding=sqliteTable('onboarding',{owner:text('owner').primaryKey(),configuredAt:text('configuredAt'),agentSeenAt:text('agentSeenAt')});
 export const preferences=sqliteTable('preferences',{owner:text('owner').primaryKey(),value:text('value').notNull(),updatedAt:text('updatedAt').notNull()});
 export const updateScheduler=sqliteTable('updateScheduler',{owner:text('owner').primaryKey(),automationId:text('automationId').notNull(),registeredAt:text('registeredAt').notNull()});
 export const updateRuns=sqliteTable('updateRuns',{id:text('id').primaryKey(),owner:text('owner').notNull(),period:text('period').notNull(),triggerKind:text('triggerKind').notNull(),state:text('state').notNull(),startedAt:text('startedAt').notNull(),finishedAt:text('finishedAt'),summary:text('summary'),config:text('config').notNull()},t=>[uniqueIndex('updateRuns_owner_period').on(t.owner,t.period),uniqueIndex('updateRuns_owner_active').on(t.owner).where(sql`${t.state} = 'running'`)]);

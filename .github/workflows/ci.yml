@@ -3,6 +3,32 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  first-use:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      FEISHU_APP_ID: ''
+      FEISHU_APP_SECRET: ''
+      FEISHU_FOLDER_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: One-command clean startup
+        run: node scripts/start.mjs --json
+      - name: New user conversation flow
+        run: python tests/onboarding_smoke.py
+      - name: Reuse the same running instance
+        run: node scripts/start.mjs --json
+      - name: Inspect connection from Codex CLI
+        run: node scripts/desk.mjs read
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15

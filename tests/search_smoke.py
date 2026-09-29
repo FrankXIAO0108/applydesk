@@ -24,4 +24,4 @@ src.source({'company':'美团','state':'partial','sourceUrl':src.url,'error':'�
 src.source({'company':'美团','state':'connected','sourceUrl':src.url,'records':[{**src.rows[0],'appliedAt':'2026-02-30'}]},400)
 assert next(j for j in core.request()[1]['jobs'] if j['recordKey']=='source:美团:'+src.rows[0]['sourceRecordId'])['appliedAt']=='2026-09-28'
 with core.cleanup.open('a',encoding='utf-8') as f:f.write(f"\nDELETE FROM searches WHERE sourceUrl LIKE '%{core.marker}%';")
-print('Search checks passed: 16-company scope, Boss excluded, tenant path isolation, deduplication, decisions preserved, partial snapshots and date precision.')
+print('Search checks passed: configured-company scope, unknown sources rejected, tenant path isolation, deduplication, decisions preserved, partial snapshots and date precision.')

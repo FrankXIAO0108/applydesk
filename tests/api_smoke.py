@@ -1,6 +1,16 @@
 """Tests the local app only. No company or Feishu requests are sent."""
 import json, urllib.request, urllib.error, http.cookiejar, uuid, pathlib
-base='http://127.0.0.1:5173'
+base=__import__('os').environ.get('APPLYDESK_TEST_URL','http://127.0.0.1:5173')
+import atexit
+def prefs(payload=None):
+    req=urllib.request.Request(base+'/api/preferences',data=json.dumps(payload).encode() if payload else None,headers={'Content-Type':'application/json','Origin':base})
+    with urllib.request.urlopen(req) as r:return json.load(r)
+original_prefs=prefs()
+atexit.register(lambda:prefs(original_prefs))
+fixture_prefs=json.loads(json.dumps(original_prefs))
+for c in fixture_prefs['companies']:
+    c['enabled']=True;c['trackApplications']=c['name'] in ['美团','百度','字节跳动','京东','快手','阿里巴巴','滴滴']
+prefs(fixture_prefs)
 jar=http.cookiejar.CookieJar()
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 client.open(base+'/').read()

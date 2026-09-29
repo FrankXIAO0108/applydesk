@@ -6,13 +6,12 @@ const words=z.array(z.string().trim().min(1).max(60)).max(30);
 export function publicUrl(value:string){
  const u=new URL(value),h=u.hostname;
  if(u.protocol!=='https:'||u.username||u.password||u.port||!h.includes('.')||/^(?:\d|\[)|(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(h))throw new Error('请填写不带登录凭据的 HTTPS 公网招聘链接');
- if(/(?:^|\.)zhipin\.com$/.test(h))throw new Error('BOSS 直聘不在当前接入范围');
  return u;
 }
 const company=z.object({name:z.string().trim().min(1).max(80),url:z.string().max(2000),applicationUrl:z.string().max(2000).default(''),enabled:z.boolean(),trackApplications:z.boolean(),searchEveryDays:z.union([z.literal(7),z.literal(14)]).default(7)}).superRefine((c,ctx)=>{try{publicUrl(c.url);if(c.applicationUrl)publicUrl(c.applicationUrl);}catch(e){ctx.addIssue({code:'custom',message:(e as Error).message});}});
 export const preferencesSchema=z.object({cities:words.min(1),employment:z.enum(['日常实习','全部实习']),directions:z.array(z.enum(['大模型应用算法','Agent','业务算法','后训练'])).min(1).max(4),includeKeywords:words,excludeKeywords:words,companies:z.array(company).min(1).max(60),updatesEnabled:z.boolean()}).superRefine((p,ctx)=>{if(new Set(p.companies.map(c=>c.name)).size!==p.companies.length)ctx.addIssue({code:'custom',message:'公司名称不能重复'});});
 export type Preferences=z.infer<typeof preferencesSchema>;
-export function defaults():Preferences{return {cities:['北京'],employment:'日常实习',directions:[...DIRECTIONS] as Preferences['directions'],includeKeywords:[],excludeKeywords:[],updatesEnabled:true,companies:COMPANIES.map(c=>({name:c.name,url:c.url,applicationUrl:'',enabled:true,trackApplications:TRACKED_COMPANIES.includes(c.name),searchEveryDays:['联想','哔哩哔哩','网易','商汤','拼多多','携程'].includes(c.name)?14:7}))};}
+export function defaults():Preferences{return {cities:['北京'],employment:'日常实习',directions:[...DIRECTIONS] as Preferences['directions'],includeKeywords:[],excludeKeywords:[],updatesEnabled:false,companies:COMPANIES.map(c=>({name:c.name,url:c.url,applicationUrl:'',enabled:false,trackApplications:false,searchEveryDays:7}))};}
 export async function getPreferences(owner:string){const row=await database().prepare('SELECT value FROM preferences WHERE owner=?').bind(owner).first<{value:string}>();return row?preferencesSchema.parse(JSON.parse(row.value)):defaults();}
 export function configuredUrl(p:Preferences,name:string,value:string,allowDisabled=false){
  const company=p.companies.find(c=>c.name===name);if(!company||(!company.enabled&&!allowDisabled))throw new Error('公司不存在或已停用');

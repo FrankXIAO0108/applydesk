@@ -1,4 +1,18 @@
-# Development contract
+# ApplyDesk operating contract
+
+## Conversation-first use
+
+- When the user asks to start, inspect recruiting websites, change filters, add a company, or track applications, operate the app instead of treating it as a coding request.
+- Read START_HERE.md and docs/CHAT_GUIDE.md; start the current instance, read its preferences, and apply only the changes requested by this user.
+- Do not force the user through the web wizard. Collect only missing necessary information in conversation, then save it through scripts/desk.mjs.
+- Preserve working settings and records. New users do not inherit any of the original author's websites, logins, schedules, or applied-company assumptions.
+- When asked to improve the program itself, follow the development rules below.
+
+## Development contract
+
+- For installation or first-use requests, follow START_HERE.md. Use the current user's folder and settings, never the original author's instance.
+- Start with `node scripts/start.mjs --json`; use its returned URL. Read docs/AUTOMATION.md for actual checks and recurring execution.
+- Do not enable application tracking for any company until the current user says they applied there.
 
 - Read README.md and docs/PRODUCT.md before changing behavior.
 - Keep raw official status, application fact, application date and check health separate.

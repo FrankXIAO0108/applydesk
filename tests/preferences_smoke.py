@@ -1,6 +1,6 @@
 """Local-only configuration and real update-state transitions. Restores settings."""
 import json,urllib.request,urllib.error,uuid,copy,pathlib,concurrent.futures
-base='http://127.0.0.1:5173'
+base=__import__('os').environ.get('APPLYDESK_TEST_URL','http://127.0.0.1:5173')
 def call(path,payload=None,status=200):
     req=urllib.request.Request(base+path,data=json.dumps(payload).encode() if payload is not None else None,headers={'Content-Type':'application/json','Origin':base})
     try:
@@ -31,9 +31,9 @@ try:
     call('/api/search',{'company':marker,'state':'ready','sourceUrl':company['url'],'items':[{k:v for k,v in job.items() if k!='company'}]})
     result=call('/api/updates',{'action':'finish','id':run['id']});assert result['checked']==1
     if not call('/api/desk')['feishu']['configured']:assert result['state']=='success'
-    run=call('/api/updates',{'action':'begin','triggerKind':'manual'});run_ids.append(run['id']);assert run['searchCompanies']==[],run
+    run=call('/api/updates',{'action':'begin','triggerKind':'manual','forceSearch':False});run_ids.append(run['id']);assert run['searchCompanies']==[],run
     call('/api/updates',{'action':'finish','id':run['id']})
-    call('/api/preferences',{**p,'updatesEnabled':False});assert call('/api/updates',{'action':'begin','triggerKind':'manual'})['skipped']
+    call('/api/preferences',{**p,'updatesEnabled':False});assert call('/api/updates',{'action':'begin','triggerKind':'scheduled'})['skipped']
     call('/api/preferences',{**p,'companies':[{**company,'enabled':False}]})
     call('/api/search',{'company':marker,'state':'ready','sourceUrl':company['url'],'items':[]},400)
 finally:
