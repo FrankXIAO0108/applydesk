@@ -8,6 +8,7 @@ def prefs(payload=None):
 original_prefs=prefs()
 atexit.register(lambda:prefs(original_prefs))
 fixture_prefs=json.loads(json.dumps(original_prefs))
+fixture_prefs['directions']=['Agent','算法','后训练']
 for c in fixture_prefs['companies']:
     c['enabled']=True;c['trackApplications']=c['name'] in ['美团','百度','字节跳动','京东','快手','阿里巴巴','滴滴']
 prefs(fixture_prefs)

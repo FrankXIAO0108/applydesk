@@ -1,6 +1,6 @@
 {
   "name": "applydesk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -53,6 +53,6 @@
       "sharp": "0.35.4"
     }
   },
-  "description": "A local-first internship application desk, built through human-AI collaboration.",
+  "description": "Conversation-first job search and application desk for Codex and your browser.",
   "license": "MIT"
 }

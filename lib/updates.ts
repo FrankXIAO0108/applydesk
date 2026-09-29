@@ -2,6 +2,7 @@ import {database,event} from './store';
 import {getPreferences} from './preferences';
 import {feishuConfigured} from './feishu';
 import {searchDue} from './cadence.mjs';
+import {searchPlan} from './job-keywords.mjs';
 export async function updateStatus(owner:string){
  const db=database();await db.prepare("UPDATE updateRuns SET state='failed',finishedAt=?,summary='运行超时；请检查电脑、浏览器连接和登录状态' WHERE owner=? AND state='running' AND startedAt<?").bind(new Date().toISOString(),owner,new Date(Date.now()-90*60000).toISOString()).run();
  const registration=await db.prepare('SELECT automationId,registeredAt FROM updateScheduler WHERE owner=?').bind(owner).first();
@@ -21,7 +22,7 @@ export async function beginUpdate(owner:string,triggerKind:'scheduled'|'manual',
  for(const c of p.companies.filter(c=>c.enabled)){const last=await db.prepare('SELECT checkedAt,state FROM searches WHERE owner=? AND company=?').bind(owner,c.name).first<{checkedAt:string;state:string}>();if((triggerKind==='manual'&&options.forceSearch!==false)||searchDue(last,c.searchEveryDays,now))searchCompanies.push(c.name);}
  const id=crypto.randomUUID();
  try{await db.prepare("INSERT INTO updateRuns(id,owner,period,triggerKind,state,startedAt,config) VALUES(?,?,?,?,'running',?,?)").bind(id,owner,period,triggerKind,now.toISOString(),JSON.stringify({...p,searchCompanies})).run();}catch(e){if(/UNIQUE/i.test(String(e)))return {skipped:true,reason:'已有同一更新任务'};throw e;}
- return {id,preferences:p,searchCompanies,applicationCompanies:p.companies.filter(c=>c.enabled&&c.trackApplications).map(c=>c.name),startedAt:now.toISOString()};
+ return {id,preferences:p,searchCompanies,searchPlan:searchPlan(p,searchCompanies),applicationCompanies:p.companies.filter(c=>c.enabled&&c.trackApplications).map(c=>c.name),startedAt:now.toISOString()};
 }
 export async function finishUpdate(owner:string,id:string,error?:string){
  const db=database(),run=await db.prepare("SELECT startedAt,config FROM updateRuns WHERE id=? AND owner=? AND state='running'").bind(id,owner).first<{startedAt:string;config:string}>();if(!run)throw new Error('更新任务不存在或已经结束');

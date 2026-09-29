@@ -11,7 +11,7 @@ def api(route,payload=None,status=200):
 before=api('/api/desk');original=json.loads(json.dumps(before['preferences']));assert not before['jobs'],'Requires an empty test installation'
 assert not before['onboarding']['configured']
 assert not any(c['enabled'] or c['trackApplications'] for c in before['preferences']['companies'])
-p=before['preferences'];p['cities']=['上海'];p['companies']=[{'name':'演示公司','url':'https://example.com/jobs','applicationUrl':'','enabled':True,'trackApplications':False,'searchEveryDays':14}]
+p=before['preferences'];p['cities']=['上海'];p['directions']=['Agent'];p['companies']=[{'name':'演示公司','url':'https://example.com/jobs','applicationUrl':'','enabled':True,'trackApplications':False,'searchEveryDays':14}]
 api('/api/onboarding',{'action':'configure','preferences':{**p,'companies':[]}},400)
 api('/api/onboarding',{'action':'configure','preferences':p})
 assert api('/api/desk')['onboarding']['configured']

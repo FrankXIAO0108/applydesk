@@ -10,7 +10,7 @@ def call(path,payload=None,status=200):
     return data
 original=call('/api/preferences');marker='qa-'+uuid.uuid4().hex
 company={'name':marker,'url':'https://example.com/jobs','applicationUrl':'','enabled':True,'trackApplications':False,'searchEveryDays':14}
-p={**copy.deepcopy(original),'cities':['上海'],'companies':[company],'updatesEnabled':True,'includeKeywords':['RAG'],'excludeKeywords':['产品经理']}
+p={**copy.deepcopy(original),'cities':['上海'],'directions':['Agent','大模型'],'companies':[company],'updatesEnabled':True,'includeKeywords':['RAG'],'excludeKeywords':['产品经理']}
 run_ids=[]
 try:
     bad={**p,'companies':[{**company,'url':'http://127.0.0.1/jobs'}]};call('/api/preferences',bad,400)

@@ -14,6 +14,8 @@ work/
 *.log
 *.pem
 *.key
+*.pdf
+*.docx
 *.tsbuildinfo
 __pycache__/
 *.pyc
