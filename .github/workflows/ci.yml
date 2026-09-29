@@ -1,0 +1,39 @@
+name: Verify ApplyDesk
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FEISHU_APP_ID: ''
+      FEISHU_APP_SECRET: ''
+      FEISHU_FOLDER_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run privacy:check
+      - run: npm run build
+      - run: npm run setup
+      - name: Local API integration checks
+        shell: bash
+        run: |
+          npm run dev > /tmp/applydesk-dev.log 2>&1 &
+          DEV_PID=$!
+          trap 'kill "$DEV_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5173/api/desk > /dev/null; then break; fi
+            sleep 1
+          done
+          python tests/search_smoke.py || { cat /tmp/applydesk-dev.log; exit 1; }
+          node scripts/cleanup-test-data.mjs

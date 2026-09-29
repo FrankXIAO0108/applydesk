@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790654820804,
+      "tag": "0000_far_wrecking_crew",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790657637663,
+      "tag": "0001_mighty_mindworm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790661109020,
+      "tag": "0002_clever_synch",
+      "breakpoints": true
+    }
+  ]
+}

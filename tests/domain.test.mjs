@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {matchJob,normalizeStage,canonicalUrl,nextCheck,safeCell,isFutureApplicationDate} from '../lib/domain.mjs';
+const role={title:'Agent 算法实习生',description:'LLM 工具调用与评估，每周至少四天，实习六个月',location:'北京',employment:'日常实习'};
+test('only Beijing daily internships match; attendance requirements are not filters',()=>{assert.equal(matchJob(role).state,'matched');assert.equal(matchJob({...role,location:'上海'}).state,'excluded');assert.equal(matchJob({...role,employment:'暑期实习'}).state,'excluded');assert.equal(matchJob({...role,employment:'实习'}).state,'review');assert.equal(matchJob({...role,location:''}).state,'review');assert.equal(matchJob({...role,employment:'非日常实习'}).state,'review');});
+test('LLM product manager is not an algorithm recommendation',()=>assert.equal(matchJob({...role,title:'大模型产品经理'}).state,'excluded'));
+test('unknown status stays unknown and rejection wins over interview keyword',()=>{assert.equal(normalizeStage('暂无进度'),'待核对');assert.equal(normalizeStage('面试未通过'),'已结束');assert.equal(normalizeStage('面试安排中'),'面试');});
+test('canonical URLs keep job IDs and SPA fragments but strip trackers',()=>{assert.equal(canonicalUrl('美团','https://zhaopin.meituan.com/job?id=123&utm_source=test'),'https://zhaopin.meituan.com/job?id=123');assert.notEqual(canonicalUrl('百度','https://talent.baidu.com/#/job/1'),canonicalUrl('百度','https://talent.baidu.com/#/job/2'));for(const url of ['javascript:alert(1)','https://talent.baidu.com.evil.org/job','https://evil.org','https://a@talent.baidu.com/'])assert.throws(()=>canonicalUrl('百度',url));});
+test('weekday schedule uses Asia/Shanghai and skips weekend',()=>{assert.equal(nextCheck(new Date('2026-10-02T02:01:00Z')),'2026-10-05T02:00:00.000Z');assert.equal(nextCheck(new Date('2026-09-29T01:00:00Z')),'2026-09-29T02:00:00.000Z');});
+test('spreadsheet cells cannot become formulas',()=>{assert.equal(safeCell(' =1+1'),"' =1+1");assert.equal(safeCell('算法岗'),'算法岗');});
+test('Baidu statuses preserve ongoing screening versus ended shared resume',()=>{assert.equal(normalizeStage('简历初筛中'),'简历筛选');assert.equal(normalizeStage('简历复筛中'),'简历筛选');assert.equal(normalizeStage('流程已结束，简历共享中'),'已结束');});
+test('date-only application dates use the Beijing calendar, without inventing a time',()=>{const earlyChinaMorning=new Date('2026-09-28T18:00:00Z');assert.equal(isFutureApplicationDate('2026-09-29',earlyChinaMorning),false);assert.equal(isFutureApplicationDate('2026-09-30',earlyChinaMorning),true);});
+test('Kuaishou not suitable is an ended application',()=>assert.equal(normalizeStage('不合适'),'已结束'));
